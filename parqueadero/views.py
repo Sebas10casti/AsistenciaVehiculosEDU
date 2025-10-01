@@ -13,7 +13,6 @@ from rest_framework.permissions import IsAuthenticated
 class VehiculoViewSet(viewsets.ModelViewSet):
     queryset = Vehiculo.objects.all().order_by('nombre_dueno')
     serializer_class = VehiculoSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -53,7 +52,6 @@ class VehiculoViewSet(viewsets.ModelViewSet):
 class RegistroViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Registro.objects.select_related('vehiculo').all()
     serializer_class = RegistroSerializer
-    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'])
     def export(self, request):
