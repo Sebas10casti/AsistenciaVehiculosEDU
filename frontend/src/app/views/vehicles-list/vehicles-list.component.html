@@ -1,0 +1,31 @@
+<div class="container mt-4">
+  <h2>Lista de Vehículos</h2>
+  <table class="table table-striped table-bordered mt-3">
+    <thead class="thead-dark">
+      <tr>
+        <th>#</th>
+        <th>Tipo</th>
+        <th>Dueño</th>
+        <th>Documento</th>
+        <th>Placa</th>
+        <th>Serial</th>
+        <th>Color</th>
+        <th>Marca</th>
+        <th>Área</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let vehiculo of vehicles; let i = index">
+        <td>{{ i + 1 }}</td>
+        <td>{{ vehiculo.tipo }}</td>
+        <td>{{ vehiculo.nombre_dueno }}</td>
+        <td>{{ vehiculo.documento }}</td>
+        <td>{{ vehiculo.placa || '-' }}</td>
+        <td>{{ vehiculo.serial || '-' }}</td>
+        <td>{{ vehiculo.color }}</td>
+        <td>{{ vehiculo.marca || '-' }}</td>
+        <td>{{ vehiculo.area }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
