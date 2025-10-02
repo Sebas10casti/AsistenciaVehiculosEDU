@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 import pandas as pd
 from io import BytesIO
+from django.db import transaction
 
 from .models import Vehiculo, Registro
 from .serializers import VehiculoSerializer, RegistroSerializer
@@ -44,45 +45,66 @@ class VehiculoViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         veh = self.get_object()
-        regs = veh.registros.all()
+        regs = [veh.registros.all()]
         serializer = RegistroSerializer(regs, many=True)
         return Response(serializer.data)
 
 
-class RegistroViewSet(viewsets.ReadOnlyModelViewSet):
+
+class RegistroViewSet(viewsets.ModelViewSet):
     queryset = Registro.objects.select_related('vehiculo').all()
     serializer_class = RegistroSerializer
+
+    @action(detail=False, methods=['post'])
+    def registro(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            registro = serializer.save()
+            return Response(RegistroSerializer(registro).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'])
     def export(self, request):
         qs = self.get_queryset()
-        desde = request.query_params.get('desde')  # opcional
-        hasta = request.query_params.get('hasta')
-        if desde:
-            qs = qs.filter(fecha__gte=desde)
-        if hasta:
-            qs = qs.filter(fecha__lte=hasta)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
-        rows = []
-        for r in qs:
-            rows.append({
-                'dueño': r.vehiculo.nombre_dueno,
-                'documento': r.vehiculo.documento,
-                'tipo': r.vehiculo.tipo,
-                'placa_o_serial': r.vehiculo.placa or r.vehiculo.serial or '',
-                'color': r.vehiculo.color,
-                'marca': r.vehiculo.marca,
-                'area': r.vehiculo.area,
-                'fecha': r.fecha.strftime('%Y-%m-%d'),
-                'hora_entrada': r.hora_entrada.strftime('%Y-%m-%d %H:%M:%S'),
-                'hora_salida': r.hora_salida.strftime('%Y-%m-%d %H:%M:%S') if r.hora_salida else ''
-            })
+    @action(detail=True, methods=['patch'])
+    def update_registro(self, request, pk=None):
+        """
+        Actualiza un registro específico por ID.
+        Útil para agregar hora_salida a un registro existente.
+        """
+        try:
+            registro = self.get_object()
+            serializer = self.get_serializer(registro, data=request.data, partial=True)
+            if serializer.is_valid():
+                updated_registro = serializer.save()
+                # Refrescar el objeto desde la base de datos para obtener los datos actualizados
+                updated_registro.refresh_from_db()
+                return Response(RegistroSerializer(updated_registro).data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        df = pd.DataFrame(rows)
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='Registros')
-        output.seek(0)
-        resp = HttpResponse(output.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        resp['Content-Disposition'] = 'attachment; filename=registros.xlsx'
-        return resp
+    @action(detail=False, methods=['get'])
+    def ultimo_registro(self, request):
+        placa = request.query_params.get('placa')
+        if not placa:
+            return Response({'error': 'Parámetro placa es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Buscar el último registro de la placa que no tenga salida
+            registro = Registro.objects.filter(
+                placa=placa,
+                hora_salida__isnull=True
+            ).order_by('-hora_entrada').first()
+            
+            if not registro:
+                return Response({'error': 'No se encontró un registro activo para esta placa'}, status=status.HTTP_404_NOT_FOUND)
+            
+            serializer = RegistroSerializer(registro)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1,0 +1,40 @@
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="text-center mb-0">Registrar Entrada de Vehículo</h3>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+            <div class="mb-3">
+              <label for="placa" class="form-label">Placa del Vehículo</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="placa" 
+                formControlName="placa"
+                placeholder="Ej: ABC-123"
+                [class.is-invalid]="registerForm.get('placa')?.invalid && registerForm.get('placa')?.touched"
+              >
+              <div class="invalid-feedback" *ngIf="registerForm.get('placa')?.invalid && registerForm.get('placa')?.touched">
+                Por favor ingrese la placa del vehículo
+              </div>
+            </div>
+            
+            <div class="d-grid">
+              <button 
+                type="submit" 
+                class="btn btn-primary btn-lg"
+                [disabled]="registerForm.invalid || isLoading"
+              >
+                <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                {{ isLoading ? 'Registrando...' : 'Registrar Entrada' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

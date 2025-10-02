@@ -23,7 +23,6 @@ export class CreateVehicleComponent {
       nombre_dueno: ['', [Validators.required, Validators.maxLength(150)]],
       documento: ['', [Validators.required, Validators.maxLength(50)]],
       placa: ['', Validators.maxLength(30)],
-      serial: ['', Validators.maxLength(80)],
       color: ['', [Validators.required, Validators.maxLength(50)]],
       marca: ['', Validators.maxLength(80)],
       area: ['', Validators.required]
